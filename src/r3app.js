@@ -19,6 +19,8 @@ function pathToLens(path) {
 }
 
 function createCancellablePromise(promise) {
+  if (promise.isCancellable) return promise;
+
   let ct;
 
   const cancellablePromise = promise.then(
@@ -36,9 +38,17 @@ function createCancellablePromise(promise) {
   cancellablePromise.cancel = function(value = cancellationToken) {
     if (ct) return this;
     console.log('cancelled');
+    if (promise.abort) {
+      promise.abort();
+    }
+    if (promise.cancel) {
+      promise.cancel();
+    }
     ct = value;
     return this;
   };
+
+  cancellablePromise.isCancellable = true;
 
   return cancellablePromise;
 }

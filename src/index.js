@@ -10,8 +10,12 @@ const styles = {
 
 const Startup = () => (
   <app.Provider>
-    <div style={styles}>
-      <Hello name="CodeSandbox" />
+    <div style={styles} className="container">
+      <div className="row">
+        <div className="col-md-12">
+          <Hello name="CodeSandbox" />
+        </div>
+      </div>
       <h2>Start editing to see some magic happen {'\u2728'}</h2>
     </div>
   </app.Provider>
