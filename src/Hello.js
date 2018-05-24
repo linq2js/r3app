@@ -3,6 +3,17 @@ import NameTextbox from './NameTextbox';
 import app from './app';
 
 export default app.connect(
+  ({ count, lazyValue }, { startCountTimer, resetCount, newAction, loadModule, lazyCall }) => ({
+    count,
+    lazyValue,
+    startCountTimer,
+    resetCount,
+    newAction,
+    loadModule,
+    lazyCall,
+    loading: loadModule.executing,
+    executing: lazyCall.executing
+  }),
   ({ name, count, lazyValue, startCountTimer, resetCount, newAction, loadModule, lazyCall, executing, loading }) => (
     <div>
       {console.log('render', name, count)}
@@ -33,16 +44,5 @@ export default app.connect(
         </button>
       )}
     </div>
-  ),
-  ({ count, lazyValue }, { startCountTimer, resetCount, newAction, loadModule, lazyCall }) => ({
-    count,
-    lazyValue,
-    startCountTimer,
-    resetCount,
-    newAction,
-    loadModule,
-    lazyCall,
-    loading: loadModule.executing,
-    executing: lazyCall.executing
-  })
+  )
 );

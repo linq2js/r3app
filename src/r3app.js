@@ -1,6 +1,5 @@
 import React from 'react';
-import { connect } from 'react-redux';
-import { Provider } from 'react-redux';
+import { connect, Provider } from 'react-redux';
 import { createStore, combineReducers } from 'redux';
 import { forEachObjIndexed as each, set, view, lensPath, equals, map } from 'ramda';
 
@@ -247,7 +246,7 @@ export function create(initialState = {}) {
     /**
      * connect component
      */
-    connect(component, mapper = noop) {
+    connect(mapper, component) {
       return connect(
         state => ({ state }),
         null,

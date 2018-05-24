@@ -1,15 +1,14 @@
-import * as r3app from './r3app';
+import { create } from './r3app';
 
 function loadState() {}
 
 function saveState() {}
 
-export default r3app
-  .create({
-    name: 'Hung',
-    count: 0,
-    lazyValue: 1
-  })
+export default create({
+  name: 'Hung',
+  count: 0,
+  lazyValue: 1
+})
   .actions({
     name: [value => value, 'changeName'],
 
