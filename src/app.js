@@ -1,14 +1,13 @@
 import { create } from './r3app';
+import { saveState, loadState } from './localStorage';
 
-function loadState() {}
-
-function saveState() {}
-
-export default create({
-  name: 'Hung',
-  count: 0,
-  lazyValue: 1
-})
+const app = create(
+  loadState({
+    name: 'Hung',
+    count: 0,
+    lazyValue: 1
+  })
+)
   .actions({
     name: [value => value, 'changeName'],
 
@@ -47,3 +46,7 @@ export default create({
       dispatchStatus: true
     }
   );
+
+app.subscribe(saveState);
+
+export default app;

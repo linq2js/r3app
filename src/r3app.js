@@ -86,12 +86,8 @@ export function create(initialState = {}) {
     return customReducers ? customReducers(state, action) : state;
   });
 
-  let testMode = false;
-
   function dispatch(action) {
-    if (testMode) {
-      console.log('[dispatch]', action);
-    }
+    console.log('[dispatch]', action);
     store.dispatch(action);
   }
 
@@ -161,7 +157,7 @@ export function create(initialState = {}) {
           delete actionWrapper.error;
           actionWrapper.executing = true;
           actionWrapper.success = false;
-          actionWrapper.failed = false;
+          actionWrapper.fail = false;
 
           try {
             actionResult = x(...args);
@@ -171,7 +167,7 @@ export function create(initialState = {}) {
               actionResult = actionResult(store.getState, actionWrappers);
             }
           } catch (ex) {
-            actionWrapper.failed = true;
+            actionWrapper.fail = true;
             actionWrapper.error = ex;
             throw ex;
           } finally {
@@ -189,6 +185,7 @@ export function create(initialState = {}) {
             // handle async action call
             actionResult.then(
               asyncResult => {
+                console.log('[success]');
                 actionWrapper.success = true;
                 actionWrapper.executing = false;
 
@@ -197,12 +194,17 @@ export function create(initialState = {}) {
                   [actionKey]: k,
                   payload: asyncResult
                 });
+
+                // make sure state changed if payload is undefined
+                if (typeof payload === 'undefined') {
+                  dispatchStatus();
+                }
               },
               ex => {
                 if (ex === cancellationToken) return;
-
+                console.log('[fail]');
                 actionWrapper.executing = false;
-                actionWrapper.failed = true;
+                actionWrapper.fail = true;
                 actionWrapper.error = ex;
                 dispatchStatus();
               }
@@ -223,7 +225,7 @@ export function create(initialState = {}) {
 
         Object.assign(actionWrapper, {
           success: undefined,
-          failed: undefined,
+          fail: undefined,
           executing: false,
           with: options => (...args) => {
             actionWrapper.options = options;
@@ -274,9 +276,8 @@ export function create(initialState = {}) {
       dispatch(...args);
       return app;
     },
-    subscribe(...args) {
-      store.subscribe(...args);
-      return app;
+    subscribe(subscriber) {
+      return store.subscribe((...args) => subscriber(store.getState(), ...args));
     },
     /**
      * register multiple actions
@@ -296,7 +297,6 @@ export function create(initialState = {}) {
      */
     test(actionPath, ...args) {
       console.log('[test]', actionPath);
-      testMode = true;
       const action = view(pathToLens(actionPath), actionWrappers);
       return action(...args);
     }
