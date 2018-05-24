@@ -3,7 +3,7 @@ import NameTextbox from './NameTextbox';
 import app from './app';
 
 export default app.connect(
-  ({ name, count, lazyValue, startCountTimer, resetCount, newAction, loadModule, lazyCall, executing }) => (
+  ({ name, count, lazyValue, startCountTimer, resetCount, newAction, loadModule, lazyCall, executing, loading }) => (
     <div>
       {console.log('render', name, count)}
       <h1>
@@ -23,6 +23,10 @@ export default app.connect(
         <button className="btn btn-success" onClick={newAction}>
           New Action
         </button>
+      ) : loading ? (
+        <button className="btn btn-default" disabled={true}>
+          Loading ...
+        </button>
       ) : (
         <button className="btn btn-default" onClick={loadModule}>
           Load Module
@@ -38,6 +42,7 @@ export default app.connect(
     newAction,
     loadModule,
     lazyCall,
+    loading: loadModule.executing,
     executing: lazyCall.executing
   })
 );

@@ -86,12 +86,22 @@ export function create(initialState = {}) {
     // call custom reducers if any
     return customReducers ? customReducers(state, action) : state;
   });
+
+  let testMode = false;
+
+  function dispatch(action) {
+    if (testMode) {
+      console.log('[dispatch]', action);
+    }
+    store.dispatch(action);
+  }
+
   let actionWrappers = {
     /**
      * update state
      */
     $(changes = {}) {
-      store.dispatch({
+      dispatch({
         type: 'merge',
         [actionKey]: '@',
         payload: changes
@@ -120,7 +130,6 @@ export function create(initialState = {}) {
           if (typeof options === 'string') {
             options = { name: options };
           }
-
           name = options.name || name;
 
           x = x[0];
@@ -142,7 +151,7 @@ export function create(initialState = {}) {
           const dispatchStatus = !currentOptions.dispatchStatus
             ? noop
             : () => {
-                store.dispatch({
+                dispatch({
                   type: actionPath,
                   [actionKey]: actionKey,
                   payload: Math.random() * new Date().getTime()
@@ -184,7 +193,7 @@ export function create(initialState = {}) {
                 actionWrapper.success = true;
                 actionWrapper.executing = false;
 
-                store.dispatch({
+                dispatch({
                   type: actionPath,
                   [actionKey]: k,
                   payload: asyncResult
@@ -203,7 +212,7 @@ export function create(initialState = {}) {
             actionWrapper.success = true;
 
             // handle sync action call
-            store.dispatch({
+            dispatch({
               type: actionPath,
               [actionKey]: k,
               payload: actionResult
@@ -239,7 +248,11 @@ export function create(initialState = {}) {
      * connect component
      */
     connect(component, mapper = noop) {
-      return connect(state => ({ state }), null, ({ state }, dispatchProps, ownProps) => mapper(state, actionWrappers, ownProps) || ownProps)(component);
+      return connect(
+        state => ({ state }),
+        null,
+        ({ state }, dispatchProps, ownProps) => mapper(state, actionWrappers, ownProps) || ownProps
+      )(component);
     },
     /**
      * register single action
@@ -259,7 +272,7 @@ export function create(initialState = {}) {
      * dispatch custom action
      */
     dispatch(...args) {
-      store.dispatch(...args);
+      dispatch(...args);
       return app;
     },
     subscribe(...args) {
@@ -272,6 +285,21 @@ export function create(initialState = {}) {
     actions(model) {
       registerActions(null, model);
       return app;
+    },
+    /**
+     * get current state
+     */
+    getState() {
+      return store.getState();
+    },
+    /**
+     * run test for specific action
+     */
+    test(actionPath, ...args) {
+      console.log('[test]', actionPath);
+      testMode = true;
+      const action = view(pathToLens(actionPath), actionWrappers);
+      return action(...args);
     }
   };
 

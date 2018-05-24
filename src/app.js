@@ -1,5 +1,9 @@
 import * as r3app from './r3app';
 
+function loadState() {}
+
+function saveState() {}
+
 export default r3app
   .create({
     name: 'Hung',
@@ -11,7 +15,16 @@ export default r3app
 
     resetCount: () => (getState, actions) => actions.$({ count: 0 }),
 
-    loadModule: () => import(/* webpackPrefetch: true */ './LazyLoadModule'),
+    loadModule: [
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => import(/* webpackPrefetch: true */ './LazyLoadModule').then(resolve), 3000)
+        ),
+      {
+        single: true,
+        dispatchStatus: true
+      }
+    ],
 
     startCountTimer: () => (getState, actions) => {
       if (getState().startCountTimer) {
