@@ -2,10 +2,18 @@ import React from 'react';
 import { connect, Provider } from 'react-redux';
 import { createStore, combineReducers } from 'redux';
 import { createSelector } from 'reselect';
-import { forEachObjIndexed as each, set, view, lensPath, equals, map, memoizeWith, identity } from 'ramda';
+import { forEachObjIndexed as each, set, view, lensPath, equals, map, identity } from 'ramda';
 
 const noop = () => {};
 const cancellationToken = {};
+
+function debounce(f, delay = 0) {
+  let timerId;
+  return function(...args) {
+    clearTimeout(timerId);
+    timerId = setTimeout(f, delay, ...args);
+  };
+}
 
 function parsePath(path) {
   return path.split(/[.[\]]/);
@@ -24,20 +32,20 @@ function createCancellablePromise(promise) {
   let ct;
 
   const cancellablePromise = promise.then(
-    result => {
+    (result) => {
       if (ct) {
         return Promise.reject(ct);
       }
       return result;
     },
-    reason => {
+    (reason) => {
       return ct || reason;
     }
   );
 
   cancellablePromise.cancel = function(value = cancellationToken) {
     if (ct) return this;
-    console.log('cancelled');
+    //console.log('cancelled');
     if (promise.abort) {
       promise.abort();
     }
@@ -71,7 +79,7 @@ export function create(initialState = {}) {
 
         return {
           ...state,
-          ...payload
+          ...payload,
         };
       }
 
@@ -100,9 +108,9 @@ export function create(initialState = {}) {
       dispatch({
         type: 'merge',
         [actionKey]: '@',
-        payload: changes
+        payload: changes,
       });
-    }
+    },
   };
 
   let customReducers = null;
@@ -110,8 +118,8 @@ export function create(initialState = {}) {
   function dummyDispatch() {
     dispatch({
       type: '@dummy',
-      [actionKey]: actionKey,
-      payload: Math.random() * new Date().getTime()
+      [actionKey]: '__dummy__',
+      payload: Math.random() * new Date().getTime(),
     });
   }
 
@@ -185,15 +193,15 @@ export function create(initialState = {}) {
 
             // handle async action call
             actionResult.then(
-              asyncResult => {
-                console.log('[success]');
+              (asyncResult) => {
+                //console.log('[success]');
                 actionWrapper.success = true;
                 actionWrapper.executing = false;
 
                 dispatch({
                   type: actionPath,
                   [actionKey]: k,
-                  payload: asyncResult
+                  payload: asyncResult,
                 });
 
                 // make sure state changed if payload is undefined
@@ -201,9 +209,9 @@ export function create(initialState = {}) {
                   dispatchStatus();
                 }
               },
-              ex => {
+              (ex) => {
                 if (ex === cancellationToken) return;
-                console.log('[fail]');
+                //console.log('[fail]');
                 actionWrapper.executing = false;
                 actionWrapper.fail = true;
                 actionWrapper.error = ex;
@@ -217,7 +225,7 @@ export function create(initialState = {}) {
             dispatch({
               type: actionPath,
               [actionKey]: k,
-              payload: actionResult
+              payload: actionResult,
             });
           }
 
@@ -228,10 +236,10 @@ export function create(initialState = {}) {
           success: undefined,
           fail: undefined,
           executing: false,
-          with: options => (...args) => {
+          with: (options) => (...args) => {
             actionWrapper.options = options;
             return actionWrapper(...args);
-          }
+          },
         });
 
         actionWrappers = set(pathToLens(actionPath), actionWrapper, actionWrappers);
@@ -245,7 +253,7 @@ export function create(initialState = {}) {
     /**
      * create provider
      */
-    Provider: props => <Provider store={store}>{props.children}</Provider>,
+    Provider: (props) => <Provider store={store}>{props.children}</Provider>,
     /**
      * connect component
      * connect(mapper, component)
@@ -280,7 +288,7 @@ export function create(initialState = {}) {
       }
 
       // create selector to memoize props
-      const reselect = createSelector(props => {
+      const reselect = createSelector((props) => {
         if (prefetch) {
           let fetchResult = prefetchArgsSelector ? prefetch(prefetchArgsSelector(props)) : prefetch();
 
@@ -294,14 +302,14 @@ export function create(initialState = {}) {
 
                 // handle async fetching
                 fetchResult.then(
-                  x => {
+                  (x) => {
                     fetchResult.success = true;
                     fetchResult.loading = false;
                     fetchResult.status = 'success';
                     fetchResult.payload = x;
                     dummyDispatch();
                   },
-                  x => {
+                  (x) => {
                     fetchResult.fail = true;
                     fetchResult.loading = false;
                     fetchResult.status = 'fail';
@@ -314,7 +322,7 @@ export function create(initialState = {}) {
                   isFetchResult: true,
                   status: 'success',
                   success: true,
-                  payload: fetchResult
+                  payload: fetchResult,
                 };
               }
             } else {
@@ -324,7 +332,7 @@ export function create(initialState = {}) {
             fetchResult = {
               status: 'success',
               success: true,
-              payload: fetchResult
+              payload: fetchResult,
             };
           }
 
@@ -333,7 +341,7 @@ export function create(initialState = {}) {
         return props;
       }, identity);
       return connect(
-        state => ({ state }),
+        (state) => ({ state }),
         null,
         ({ state }, dispatchProps, ownProps) => reselect(mapper(state, actionWrappers, ownProps)) || ownProps
       )(component);
@@ -359,6 +367,10 @@ export function create(initialState = {}) {
       dispatch(...args);
       return app;
     },
+    debounce,
+    /**
+     *
+     */
     subscribe(subscriber) {
       return store.subscribe((...args) => subscriber(store.getState(), ...args));
     },
@@ -385,10 +397,10 @@ export function create(initialState = {}) {
      * run test for specific action
      */
     test(actionPath, ...args) {
-      console.log('[test]', actionPath);
+      //console.log('[test]', actionPath);
       const action = view(pathToLens(actionPath), actionWrappers);
       return action(...args);
-    }
+    },
   };
 
   return app;
