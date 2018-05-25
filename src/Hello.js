@@ -11,10 +11,14 @@ const mapper = ({ count, lazyValue }, { startCountTimer, resetCount, newAction, 
   loadModule,
   lazyCall,
   loading: loadModule.executing,
-  executing: lazyCall.executing
+  executing: lazyCall.executing,
+  test: ['aaaaaaaaaaa', {}]
 });
 
+const prefetch = [({ lazyValue }) => lazyValue, value => (value % 2 === 0 ? import('./ModuleA') : import('./ModuleB'))];
+
 const view = ({
+  $fetch,
   name,
   count,
   lazyValue,
@@ -27,7 +31,10 @@ const view = ({
   loading
 }) => (
   <div>
-    {console.log('render', name, count)}
+    {$fetch.status}
+    <hr />
+    {JSON.stringify($fetch.payload)}
+    {console.log('[render]', name, count)}
     <h1>
       Hello {name} {count}!
     </h1>
@@ -57,4 +64,4 @@ const view = ({
   </div>
 );
 
-export default app.connect(mapper, view);
+export default app.connect(mapper, prefetch, view);

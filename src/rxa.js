@@ -1,7 +1,8 @@
 import React from 'react';
 import { connect, Provider } from 'react-redux';
 import { createStore, combineReducers } from 'redux';
-import { forEachObjIndexed as each, set, view, lensPath, equals, map } from 'ramda';
+import { createSelector } from 'reselect';
+import { forEachObjIndexed as each, set, view, lensPath, equals, map, memoizeWith, identity } from 'ramda';
 
 const noop = () => {};
 const cancellationToken = {};
@@ -87,7 +88,7 @@ export function create(initialState = {}) {
   });
 
   function dispatch(action) {
-    console.log('[dispatch]', action);
+    //console.log('[dispatch]', action);
     store.dispatch(action);
   }
 
@@ -105,6 +106,14 @@ export function create(initialState = {}) {
   };
 
   let customReducers = null;
+
+  function dummyDispatch() {
+    dispatch({
+      type: '@dummy',
+      [actionKey]: actionKey,
+      payload: Math.random() * new Date().getTime()
+    });
+  }
 
   function registerActions(parentKey, model) {
     each((x, k) => {
@@ -143,15 +152,7 @@ export function create(initialState = {}) {
 
           delete actionWrapper.lastResult;
 
-          const dispatchStatus = !currentOptions.dispatchStatus
-            ? noop
-            : () => {
-                dispatch({
-                  type: actionPath,
-                  [actionKey]: actionKey,
-                  payload: Math.random() * new Date().getTime()
-                });
-              };
+          const dispatchStatus = !currentOptions.dispatchStatus ? noop : dummyDispatch;
 
           let actionResult;
           delete actionWrapper.error;
@@ -247,12 +248,94 @@ export function create(initialState = {}) {
     Provider: props => <Provider store={store}>{props.children}</Provider>,
     /**
      * connect component
+     * connect(mapper, component)
+     * connect(mapper, prefetch, component)
+     * connect(mapper, [argsSelector, prefetch], component)
      */
-    connect(mapper, component) {
+    connect(...args) {
+      if (args.length < 2) {
+        throw new Error('Argument count mismatch');
+      }
+      let mapper, component, prefetch, prefetchArgsSelector;
+      if (args.length === 2) {
+        [mapper, component] = args;
+      } else if (args.length === 3) {
+        [mapper, prefetch, component] = args;
+      } else if (args.length === 4) {
+        [mapper, prefetch, prefetchArgsSelector, component] = args;
+      }
+
+      // prefetch enabled
+      if (prefetch) {
+        // support prefetch args selector
+        if (prefetch instanceof Array) {
+          [prefetchArgsSelector, prefetch] = prefetch;
+        }
+
+        prefetch = createSelector(prefetch, identity);
+
+        if (prefetchArgsSelector) {
+          prefetchArgsSelector = createSelector(prefetchArgsSelector, identity);
+        }
+      }
+
+      // create selector to memoize props
+      const reselect = createSelector(props => {
+        if (prefetch) {
+          let fetchResult = prefetchArgsSelector ? prefetch(prefetchArgsSelector(props)) : prefetch();
+
+          if (fetchResult) {
+            if (!fetchResult.isFetchResult) {
+              if (fetchResult.then) {
+                // init fetching status
+                fetchResult.isFetchResult = true;
+                fetchResult.status = 'loading';
+                fetchResult.loading = true;
+
+                // handle async fetching
+                fetchResult.then(
+                  x => {
+                    fetchResult.success = true;
+                    fetchResult.loading = false;
+                    fetchResult.status = 'success';
+                    fetchResult.payload = x;
+                    dummyDispatch();
+                  },
+                  x => {
+                    fetchResult.fail = true;
+                    fetchResult.loading = false;
+                    fetchResult.status = 'fail';
+                    fetchResult.payload = x;
+                    dummyDispatch();
+                  }
+                );
+              } else {
+                fetchResult = {
+                  isFetchResult: true,
+                  status: 'success',
+                  success: true,
+                  payload: fetchResult
+                };
+              }
+            } else {
+              // do not touch
+            }
+          } else {
+            fetchResult = {
+              status: 'success',
+              success: true,
+              payload: fetchResult
+            };
+          }
+
+          props.$fetch = fetchResult;
+        }
+        return props;
+      }, identity);
       return connect(
         state => ({ state }),
         null,
-        ({ state }, dispatchProps, ownProps) => mapper(state, actionWrappers, ownProps) || ownProps
+        ({ state }, dispatchProps, ownProps) => reselect(mapper(state, actionWrappers, ownProps)) || ownProps
       )(component);
     },
     /**
@@ -285,6 +368,12 @@ export function create(initialState = {}) {
     actions(model) {
       registerActions(null, model);
       return app;
+    },
+    /**
+     * create new selector
+     */
+    selector(...args) {
+      return createSelector(...args);
     },
     /**
      * get current state

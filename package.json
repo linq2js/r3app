@@ -1,5 +1,5 @@
 {
-  "name": "r3app",
+  "name": "rxa",
   "version": "1.0.0",
   "description": "",
   "keywords": [],
@@ -10,7 +10,8 @@
     "react-dom": "16.3.2",
     "react-redux": "5.0.7",
     "react-scripts": "1.1.4",
-    "redux": "4.0.0"
+    "redux": "4.0.0",
+    "reselect": "3.0.1"
   },
   "devDependencies": {},
   "scripts": {

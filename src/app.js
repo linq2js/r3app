@@ -1,4 +1,4 @@
-import { create } from './r3app';
+import { create } from './rxa';
 import { saveState, loadState } from './localStorage';
 
 const app = create(
@@ -16,7 +16,10 @@ const app = create(
     loadModule: [
       () =>
         new Promise(resolve =>
-          setTimeout(() => import(/* webpackPrefetch: true */ './LazyLoadModule').then(resolve), 3000)
+          setTimeout(async () => {
+            await import(/* webpackPrefetch: true */ './LazyLoadModule');
+            resolve(undefined);
+          }, 3000)
         ),
       {
         single: true,
